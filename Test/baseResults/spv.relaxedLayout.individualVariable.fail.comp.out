@@ -1,0 +1,8 @@
+spv.relaxedLayout.individualVariable.fail.comp
+ERROR: 0:5: 'layout' : relaxed block layout can only be used on a uniform or buffer 
+ERROR: 0:7: 'layout' : relaxed block layout can only be used on a uniform or buffer 
+ERROR: 0:10: 'assign' :  cannot convert from ' const int' to 'layout( relaxed) temp highp 4-component vector of float'
+ERROR: 3 compilation errors.  No code generated.
+
+
+SPIR-V is not generated for failed compile or link

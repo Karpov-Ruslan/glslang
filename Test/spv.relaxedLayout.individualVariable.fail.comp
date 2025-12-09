@@ -1,0 +1,11 @@
+#version 460 core
+
+#extension GL_EXT_relaxed_block_layout : enable
+
+layout(relaxed) vec4 i; // relaxed block layout can only be used on a uniform or buffer
+
+layout(local_size_x = 1, relaxed) in; // the same as above
+
+void main() {
+    i = 5;
+}
