@@ -278,7 +278,7 @@ private:
     unsigned int features;
 };
 
-// MustBeAssigned wraps a T, asserting that it has been assigned with 
+// MustBeAssigned wraps a T, asserting that it has been assigned with
 // operator =() before attempting to read with operator T() or operator ->().
 // Used to catch cases where fields are read before they have been assigned.
 template<typename T>
@@ -289,7 +289,7 @@ public:
     MustBeAssigned(const T& v) : value(v) {}
     operator const T&() const { assert(isSet); return value; }
     const T* operator ->() const { assert(isSet); return &value; }
-    MustBeAssigned& operator = (const T& v) { value = v; isSet = true; return *this; } 
+    MustBeAssigned& operator = (const T& v) { value = v; isSet = true; return *this; }
 private:
     T value;
     bool isSet = false;
@@ -1074,6 +1074,10 @@ public:
         return IsRequestedExtension(E_GL_EXT_scalar_block_layout);
     }
 
+    bool usingRelaxedBlockLayout() const {
+        return IsRequestedExtension(E_GL_EXT_relaxed_block_layout);
+    }
+
     bool usingTextureOffsetNonConst() const {
         return IsRequestedExtension(E_GL_EXT_texture_offset_non_const);
     }
@@ -1109,9 +1113,9 @@ public:
     static int computeTypeUniformLocationSize(const TType&);
 
     static int getBaseAlignmentScalar(const TType&, int& size);
-    static int getBaseAlignment(const TType&, int& size, int& stride, TLayoutPacking layoutPacking, bool rowMajor);
+    static int getBaseAlignment(const TType&, int& size, int& stride, TLayoutPacking layoutPacking, bool rowMajor, bool layoutRelaxed);
     static int getScalarAlignment(const TType&, int& size, int& stride, bool rowMajor);
-    static int getMemberAlignment(const TType&, int& size, int& stride, TLayoutPacking layoutPacking, bool rowMajor);
+    static int getMemberAlignment(const TType&, int& size, int& stride, TLayoutPacking layoutPacking, bool rowMajor, bool layoutRelaxed);
     static bool improperStraddle(const TType& type, int size, int offset, bool vectorLike);
     static void updateOffset(const TType& parentType, const TType& memberType, int& offset, int& memberSize);
     static int getOffset(const TType& type, int index);

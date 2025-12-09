@@ -776,6 +776,11 @@ private:
                 std::string errorStr = name + ": have layoutMatrix conflict cross stage.";
                 infoSink.info.message(EPrefixError, errorStr.c_str());
             }
+            if (qualifier1.layoutRelaxed != qualifier2.layoutRelaxed) {
+                hasError = true;
+                std::string errorStr = name + ": have layoutRelaxed conflict cross stage.";
+                infoSink.info.message(EPrefixError, errorStr.c_str());
+            }
             if (qualifier1.layoutOffset != qualifier2.layoutOffset) {
                 hasError = true;
                 std::string errorStr = name + ": have layoutOffset conflict cross stage.";
@@ -1819,7 +1824,7 @@ bool TGlslIoMapper::doMap(TIoMapResolver* resolver, TInfoSink& infoSink) {
                     TType& t = at->second.symbol->getWritableType();
                     int size, stride;
                     TIntermediate::getBaseAlignment(t, size, stride, autoPushConstantBlockPacking,
-                                                    qualifier.layoutMatrix == ElmRowMajor);
+                                                    qualifier.layoutMatrix == ElmRowMajor, false);
                     if (size <= int(autoPushConstantMaxSize)) {
                         qualifier.setBlockStorage(EbsPushConstant);
                         qualifier.layoutPacking = autoPushConstantBlockPacking;

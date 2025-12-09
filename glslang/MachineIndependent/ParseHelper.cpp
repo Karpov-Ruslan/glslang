@@ -1511,7 +1511,7 @@ TIntermTyped* TParseContext::handleFunctionCall(const TSourceLoc& loc, TFunction
                         i == 1) {
                         TStorageQualifier storage = arg->getAsTyped()->getType().getQualifier().storage;
                         if (storage != EvqBuffer && storage != EvqShared) {
-                            error(arguments->getLoc(), "buffer argument must be in buffer or shared storage", 
+                            error(arguments->getLoc(), "buffer argument must be in buffer or shared storage",
                                   fnCandidate->getName().c_str(), "");
                         }
                     }
@@ -3082,10 +3082,10 @@ void TParseContext::builtInOpCheck(const TSourceLoc& loc, const TFunction& fnCan
             if (f16ShadowCompare)
                 ++arg;
             // Allow non-constant offsets for certain texture ops
-            bool variableOffsetSupport = extensionTurnedOn(E_GL_NV_gpu_shader5) && 
-                (callNode.getOp() == EOpTextureOffset || 
+            bool variableOffsetSupport = extensionTurnedOn(E_GL_NV_gpu_shader5) &&
+                (callNode.getOp() == EOpTextureOffset ||
                  callNode.getOp() == EOpTextureFetchOffset ||
-                 callNode.getOp() == EOpTextureProjOffset || 
+                 callNode.getOp() == EOpTextureProjOffset ||
                  callNode.getOp() == EOpTextureLodOffset ||
                  callNode.getOp() == EOpTextureProjLodOffset);
             if (! (*argp)[arg]->getAsTyped()->getQualifier().isConstant()) {
@@ -3486,7 +3486,7 @@ void TParseContext::builtInOpCheck(const TSourceLoc& loc, const TFunction& fnCan
     case EOpEqual:
     case EOpNotEqual:
         if (profile != EEsProfile && version >= 150 && version < 450) {
-            if ((*argp)[1]->getAsTyped()->getBasicType() == EbtInt64 ||                 
+            if ((*argp)[1]->getAsTyped()->getBasicType() == EbtInt64 ||
                 (*argp)[1]->getAsTyped()->getBasicType() == EbtUint64)
                 requireExtensions(loc, 1, &E_GL_NV_gpu_shader5, fnCandidate.getName().c_str());
         }
@@ -5041,7 +5041,7 @@ void TParseContext::globalQualifierTypeCheck(const TSourceLoc& loc, const TQuali
         error(loc, "cannot use interpolation qualifiers with patch", "patch", "");
 
     // Only "patch in" is supported via GL_NV_gpu_shader5
-    if (! symbolTable.atBuiltInLevel() && qualifier.isPatch() && 
+    if (! symbolTable.atBuiltInLevel() && qualifier.isPatch() &&
         (language == EShLangGeometry) && qualifier.storage != EvqVaryingIn &&
         extensionTurnedOn(E_GL_NV_gpu_shader5))
             error(loc, "only 'patch in' is supported in this stage:", "patch", "geometry");
@@ -5065,7 +5065,7 @@ void TParseContext::globalQualifierTypeCheck(const TSourceLoc& loc, const TQuali
             }
             if (publicType.basicType == EbtDouble) {
             	const char* const float64_attrib[] = {E_GL_NV_gpu_shader5, E_GL_ARB_vertex_attrib_64bit};
-                const int Num_float64_attrib = sizeof(float64_attrib) / sizeof(float64_attrib[0]);        
+                const int Num_float64_attrib = sizeof(float64_attrib) / sizeof(float64_attrib[0]);
                 profileRequires(loc, ~EEsProfile, 410, Num_float64_attrib, float64_attrib, "vertex-shader `double` type input");
 			}
             if (qualifier.isAuxiliary() || qualifier.isInterpolation() || qualifier.isMemory() || qualifier.invariant)
@@ -6667,6 +6667,12 @@ void TParseContext::setLayoutQualifier(const TSourceLoc& loc, TPublicType& publi
             return;
         }
     }
+    if (id == "relaxed") {
+        requireVulkan(loc, "relaxed");
+        requireExtensions(loc, 1, &E_GL_EXT_relaxed_block_layout, "relaxed block layout");
+        publicType.qualifier.layoutRelaxed = true;
+        return;
+    }
     if (id == "push_constant") {
         requireVulkan(loc, "push_constant");
         publicType.qualifier.layoutPushConstant = true;
@@ -7391,6 +7397,8 @@ void TParseContext::mergeObjectLayoutQualifiers(TQualifier& dst, const TQualifie
         dst.layoutMatrix = src.layoutMatrix;
     if (src.hasPacking())
         dst.layoutPacking = src.layoutPacking;
+    if (src.isRelaxed())
+        dst.layoutRelaxed = true;
 
     if (src.hasStream())
         dst.layoutStream = src.layoutStream;
@@ -7514,6 +7522,8 @@ void TParseContext::layoutObjectCheck(const TSourceLoc& loc, const TSymbol& symb
                     error(loc, "cannot specify matrix layout on a variable declaration", "layout", "");
                 if (qualifier.hasPacking())
                     error(loc, "cannot specify packing on a variable declaration", "layout", "");
+                if (qualifier.isRelaxed())
+                    error(loc, "cannot specify relaxed block layout on a variable declaration", "layout", "");
                 // "The offset qualifier can only be used on block members of blocks..."
                 if (qualifier.hasOffset() && !type.isAtomic())
                     error(loc, "cannot specify on a variable declaration", "offset", "");
@@ -7936,6 +7946,8 @@ void TParseContext::layoutQualifierCheck(const TSourceLoc& loc, const TQualifier
         if (!storageCanHaveLayoutInBlock(qualifier.storage) && !qualifier.isTaskMemory()) {
             if (qualifier.hasMatrix() || qualifier.hasPacking())
                 error(loc, "matrix or packing qualifiers can only be used on a uniform or buffer", "layout", "");
+            if (qualifier.isRelaxed())
+                error(loc, "relaxed block layout can only be used on a uniform or buffer", "layout", "");
             if (qualifier.hasOffset() || qualifier.hasAlign())
                 error(loc, "offset/align can only be used on a uniform or buffer", "layout", "");
         }
@@ -8324,14 +8336,14 @@ const TFunction* TParseContext::findFunction400(const TSourceLoc& loc, const TFu
         if (from == to1)
             return false;
         if (extensionTurnedOn(E_GL_NV_gpu_shader5)) {
-            // This map refers to the conversion table mentioned under the 
+            // This map refers to the conversion table mentioned under the
             // section "Modify Section 6.1, Function Definitions, p. 63" in NV_gpu_shader5 spec
             const static std::map<int, std::vector<int>> conversionTable = {
                 {EbtInt8,   {EbtInt, EbtInt64}},
                 {EbtInt16,  {EbtInt, EbtInt64}},
                 {EbtInt,    {EbtInt64}},
-                {EbtUint8,  {EbtUint, EbtUint64}}, 
-                {EbtUint16, {EbtUint, EbtUint64}}, 
+                {EbtUint8,  {EbtUint, EbtUint64}},
+                {EbtUint16, {EbtUint, EbtUint64}},
                 {EbtUint,   {EbtUint64}},
             };
             auto source = conversionTable.find(from.getBasicType());
@@ -10299,6 +10311,8 @@ TIntermNode* TParseContext::declareBlock(const TSourceLoc& loc, TTypeList& typeL
 
         if (memberQualifier.hasPacking())
             error(memberLoc, "member of block cannot have a packing layout qualifier", typeList[member].type->getFieldName().c_str(), "");
+        if (memberQualifier.isRelaxed())
+            error(memberLoc, "member of block cannot have a relaxed layout qualifier", typeList[member].type->getFieldName().c_str(), "");
         if (memberQualifier.hasLocation()) {
             const char* feature = "location on block member";
             switch (currentBlockQualifier.storage) {
@@ -10707,7 +10721,8 @@ void TParseContext::fixBlockUniformOffsets(TQualifier& qualifier, TTypeList& typ
         TLayoutMatrix subMatrixLayout = typeList[member].type->getQualifier().layoutMatrix;
         int dummyStride;
         int memberAlignment = intermediate.getMemberAlignment(*typeList[member].type, memberSize, dummyStride, qualifier.layoutPacking,
-                                                              subMatrixLayout != ElmNone ? subMatrixLayout == ElmRowMajor : qualifier.layoutMatrix == ElmRowMajor);
+                                                              subMatrixLayout != ElmNone ? subMatrixLayout == ElmRowMajor : qualifier.layoutMatrix == ElmRowMajor,
+                                                              typeList[member].type->getQualifier().layoutRelaxed);
         if (memberQualifier.hasOffset()) {
             // "The specified offset must be a multiple
             // of the base alignment of the type of the block member it qualifies, or a compile-time error results."
@@ -10743,6 +10758,9 @@ void TParseContext::fixBlockUniformOffsets(TQualifier& qualifier, TTypeList& typ
         // increase it to the first offset that is a multiple of
         // the actual alignment."
         RoundToPow2(offset, memberAlignment);
+        if (qualifier.layoutPacking != ElpScalar &&
+            intermediate.improperStraddle(*typeList[member].type, memberSize, offset, typeList[member].type->isVector()))
+            RoundToPow2(offset, 16);
         typeList[member].type->getQualifier().layoutOffset = offset;
         offset += memberSize;
     }
@@ -10862,6 +10880,10 @@ void TParseContext::addQualifierToExisting(const TSourceLoc& loc, TQualifier qua
         }
         if (qualifier.hasPacking()) {
             warn(loc, "the packing layout (scalar, std430, etc) is ignored when defined in forward declaration",
+                 identifier.c_str(), "");
+        }
+        if (qualifier.isRelaxed()) {
+            warn(loc, "the relaxed block layout is ignored when defined in forward declaration",
                  identifier.c_str(), "");
         }
         TTypeList typeList;
@@ -11264,12 +11286,16 @@ void TParseContext::updateStandaloneQualifierDefaults(const TSourceLoc& loc, con
             globalUniformDefaults.layoutMatrix = qualifier.layoutMatrix;
         if (qualifier.hasPacking())
             globalUniformDefaults.layoutPacking = qualifier.layoutPacking;
+        if (qualifier.isRelaxed())
+            globalUniformDefaults.layoutRelaxed = true;
         break;
     case EvqBuffer:
         if (qualifier.hasMatrix())
             globalBufferDefaults.layoutMatrix = qualifier.layoutMatrix;
         if (qualifier.hasPacking())
             globalBufferDefaults.layoutPacking = qualifier.layoutPacking;
+        if (qualifier.isRelaxed())
+            globalBufferDefaults.layoutRelaxed = true;
         break;
     case EvqVaryingIn:
         break;
@@ -11288,6 +11314,8 @@ void TParseContext::updateStandaloneQualifierDefaults(const TSourceLoc& loc, con
             globalSharedDefaults.layoutMatrix = qualifier.layoutMatrix;
         if (qualifier.hasPacking())
             globalSharedDefaults.layoutPacking = qualifier.layoutPacking;
+        if (qualifier.isRelaxed())
+            globalSharedDefaults.layoutRelaxed = true;
         break;
     default:
         error(loc, "default qualifier requires 'uniform', 'buffer', 'in', 'out' or 'shared' storage qualification", "", "");

@@ -563,7 +563,7 @@ spv::MemoryAccessMask TGlslangToSpvTraverser::TranslateMemoryAccess(
         return mask;
 
     if (coherentFlags.isVolatile() || coherentFlags.anyCoherent()) {
-        mask = mask | spv::MemoryAccessMask::MakePointerAvailableKHR | 
+        mask = mask | spv::MemoryAccessMask::MakePointerAvailableKHR |
                       spv::MemoryAccessMask::MakePointerVisibleKHR;
     }
 
@@ -1325,7 +1325,7 @@ spv::LoopControlMask TGlslangToSpvTraverser::TranslateLoopControl(const glslang:
 // Translate glslang type to SPIR-V storage class.
 spv::StorageClass TGlslangToSpvTraverser::TranslateStorageClass(const glslang::TType& type)
 {
-    if (type.getBasicType() == glslang::EbtRayQuery || type.getBasicType() == glslang::EbtHitObjectNV 
+    if (type.getBasicType() == glslang::EbtRayQuery || type.getBasicType() == glslang::EbtHitObjectNV
         || type.getBasicType() == glslang::EbtHitObjectEXT)
         return spv::StorageClass::Private;
     if (type.getQualifier().isSpirvByReference()) {
@@ -6282,7 +6282,7 @@ int TGlslangToSpvTraverser::getArrayStride(const glslang::TType& arrayType, glsl
     int size;
     int stride;
     glslangIntermediate->getMemberAlignment(arrayType, size, stride, explicitLayout,
-        matrixLayout == glslang::ElmRowMajor);
+        matrixLayout == glslang::ElmRowMajor, arrayType.getQualifier().isRelaxed());
 
     return stride;
 }
@@ -6299,7 +6299,7 @@ int TGlslangToSpvTraverser::getMatrixStride(const glslang::TType& matrixType, gl
     int size;
     int stride;
     glslangIntermediate->getMemberAlignment(elementType, size, stride, explicitLayout,
-        matrixLayout == glslang::ElmRowMajor);
+        matrixLayout == glslang::ElmRowMajor, matrixType.getQualifier().isRelaxed());
 
     return stride;
 }
@@ -6342,7 +6342,7 @@ void TGlslangToSpvTraverser::updateMemberOffset(const glslang::TType& structType
     int memberSize;
     int dummyStride;
     int memberAlignment = glslangIntermediate->getMemberAlignment(memberType, memberSize, dummyStride, explicitLayout,
-        matrixLayout == glslang::ElmRowMajor);
+        matrixLayout == glslang::ElmRowMajor, structType.getQualifier().isRelaxed());
 
     bool isVectorLike = memberType.isVector();
     if (memberType.isMatrix()) {
@@ -8837,7 +8837,7 @@ spv::Id TGlslangToSpvTraverser::createAtomicOperation(glslang::TOperator op, spv
     case glslang::EOpAtomicExchange:
     case glslang::EOpImageAtomicExchange:
     case glslang::EOpAtomicCounterExchange:
-        if ((typeProxy == glslang::EbtFloat16) && 
+        if ((typeProxy == glslang::EbtFloat16) &&
             (opType.getVectorSize() == 2 || opType.getVectorSize() == 4)) {
                 builder.addExtension(spv::E_SPV_NV_shader_atomic_fp16_vector);
                 builder.addCapability(spv::Capability::AtomicFloat16VectorNV);
