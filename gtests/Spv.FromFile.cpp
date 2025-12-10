@@ -604,6 +604,7 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.tensorARM.size.comp",
         "spv.relaxedLayout.memberBlock.fail.comp",
         "spv.relaxedLayout.individualVariable.fail.comp",
+        "spv.relaxedLayout.nesting.comp",
         "spv.std140.relaxedLayout.comp",
         "spv.std430.relaxedLayout.comp",
         "spv.scalar.relaxedLayout.comp",
