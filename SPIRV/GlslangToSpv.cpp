@@ -271,7 +271,7 @@ protected:
     std::unordered_set<long long> rValueParameters;  // set of formal function parameters passed as rValues,
                                                // rather than a pointer
     std::unordered_map<std::string, spv::Function*> functionMap;
-    std::unordered_map<const glslang::TTypeList*, spv::Id> structMap[glslang::ElpCount][glslang::ElmCount];
+    std::unordered_map<const glslang::TTypeList*, spv::Id> structMap[2][glslang::ElpCount][glslang::ElmCount];
     // for mapping glslang block indices to spv indices (e.g., due to hidden members):
     std::unordered_map<long long, std::vector<int>> memberRemapper;
     // for mapping glslang symbol struct to symbol Id
@@ -5438,7 +5438,7 @@ spv::Id TGlslangToSpvTraverser::convertGlslangToSpvType(const glslang::TType& ty
             // Try to share structs for different layouts, but not yet for other
             // kinds of qualification (primarily not yet including interpolant qualification).
             if (! HasNonLayoutQualifiers(type, qualifier))
-                spvType = structMap[explicitLayout][qualifier.layoutMatrix][glslangMembers];
+                spvType = structMap[static_cast<int>(layoutRelaxed)][explicitLayout][qualifier.layoutMatrix][glslangMembers];
             if (spvType != spv::NoResult)
                 break;
 
@@ -5894,7 +5894,7 @@ spv::Id TGlslangToSpvTraverser::convertGlslangStructToSpvType(const glslang::TTy
     // Make the SPIR-V type
     spv::Id spvType = builder.makeStructType(spvMembers, memberDebugInfo, type.getTypeName().c_str(), false);
     if (! HasNonLayoutQualifiers(type, qualifier))
-        structMap[explicitLayout][qualifier.layoutMatrix][glslangMembers] = spvType;
+        structMap[static_cast<int>(layoutRelaxed)][explicitLayout][qualifier.layoutMatrix][glslangMembers] = spvType;
 
     // Decorate it
     decorateStructType(type, glslangMembers, explicitLayout, layoutRelaxed, qualifier, spvType, spvMembers);
