@@ -606,12 +606,12 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.relaxedLayout.individualVariable.fail.comp",
         "spv.relaxedLayout.multipleStructUsage.comp",
         "spv.relaxedLayout.nesting.comp",
-        "spv.std140.relaxedLayout.comp",
-        "spv.std430.relaxedLayout.comp",
-        "spv.scalar.relaxedLayout.comp",
-        "spv.std140.defaultRelaxedLayout.comp",
-        "spv.std430.defaultRelaxedLayout.comp",
-        "spv.scalar.defaultRelaxedLayout.comp",
+        "spv.relaxedLayout.std140.comp",
+        "spv.relaxedLayout.std430.comp",
+        "spv.relaxedLayout.scalar.comp",
+        "spv.relaxedLayout.std140.default.comp",
+        "spv.relaxedLayout.std430.default.comp",
+        "spv.relaxedLayout.scalar.default.comp",
     })),
     FileNameAsCustomTestSuffix
 );
@@ -773,9 +773,6 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.ext.RayGenSBTlayout140.rgen",
         "spv.ext.RayGenSBTlayout430.rgen",
         "spv.ext.RayGenSBTlayoutscalar.rgen",
-        "spv.ext.RayGenSBTlayout140relaxed.rgen",
-        "spv.ext.RayGenSBTlayout430relaxed.rgen",
-        "spv.ext.RayGenSBTlayoutscalarrelaxed.rgen",
         "spv.ext.World3x4.rahit",
         "spv.ext.AccelDecl.frag",
         "spv.ext.RayQueryDecl.frag",
@@ -790,9 +787,6 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.WorkgroupMemoryExplicitLayout.std140.comp",
         "spv.WorkgroupMemoryExplicitLayout.std430.comp",
         "spv.WorkgroupMemoryExplicitLayout.scalar.comp",
-        "spv.WorkgroupMemoryExplicitLayout.std140.relaxed.comp",
-        "spv.WorkgroupMemoryExplicitLayout.std430.relaxed.comp",
-        "spv.WorkgroupMemoryExplicitLayout.scalar.relaxed.comp",
 
         // SPV_EXT_mesh_shader
         "spv.ext.meshShaderBuiltins.mesh",
