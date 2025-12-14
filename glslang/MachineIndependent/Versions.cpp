@@ -390,6 +390,7 @@ void TParseVersions::initializeExtensionBehavior()
     extensionBehavior[E_GL_EXT_shader_64bit_indexing]       = EBhDisable;
     extensionBehavior[E_GL_EXT_conservative_depth]          = EBhDisable;
     extensionBehavior[E_GL_EXT_long_vector]                 = EBhDisable;
+    extensionBehavior[E_GL_EXT_relaxed_block_layout]        = EBhDisable;
 
     // OVR extensions
     extensionBehavior[E_GL_OVR_multiview]                = EBhDisable;
@@ -640,6 +641,7 @@ void TParseVersions::getPreamble(std::string& preamble)
             "#define GL_EXT_shader_64bit_indexing 1\n"
 
             "#define GL_EXT_shader_invocation_reorder 1\n"
+            "#define GL_EXT_relaxed_block_layout 1\n"
             ;
 
         if (spvVersion.spv == 0) {
@@ -858,7 +860,7 @@ void TParseVersions::checkDeprecated(const TSourceLoc& loc, int profileMask, int
                 error(loc, "deprecated, may be removed in future release", featureDesc, "");
             else if (! suppressWarnings())
                 infoSink.info.message(EPrefixWarning, (TString(featureDesc) + " deprecated in version " +
-                                                       String(depVersion) + "; may be removed in future release").c_str(), 
+                                                       String(depVersion) + "; may be removed in future release").c_str(),
                                                        loc, messages & EShMsgAbsolutePath, messages & EShMsgDisplayErrorColumn);
         }
     }

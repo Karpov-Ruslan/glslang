@@ -85,7 +85,7 @@ struct TSampler {   // misnomer now; includes images, textures without sampler, 
     bool      image : 1;  // image, combined should be false
     bool   combined : 1;  // true means texture is combined with a sampler, false means texture with no sampler
     bool    sampler : 1;  // true means a pure sampler, other fields should be clear()
-    bool   tileQCOM : 1;  // is tile shading attachment 
+    bool   tileQCOM : 1;  // is tile shading attachment
 
     unsigned int vectorSize : 3;  // vector return type size.
     // Some languages support structures as sample results.  Storing the whole structure in the
@@ -956,6 +956,7 @@ public:
 
     TLayoutFormat layoutFormat                           :  8;
 
+    bool layoutRelaxed;
     bool layoutPushConstant;
     bool layoutBufferReference;
     bool layoutPassthrough;
@@ -980,6 +981,7 @@ public:
     {
         return hasMatrix() ||
                hasPacking() ||
+               isRelaxed() ||
                hasOffset() ||
                hasBinding() ||
                hasSet() ||
@@ -989,6 +991,7 @@ public:
     {
         layoutMatrix = ElmNone;
         layoutPacking = ElpNone;
+        layoutRelaxed = false;
         layoutOffset = layoutNotSet;
         layoutAlign = layoutNotSet;
 
@@ -1072,6 +1075,7 @@ public:
         return layoutAttachment != layoutAttachmentEnd;
     }
     TLayoutFormat getFormat() const { return layoutFormat; }
+    bool isRelaxed() const { return layoutRelaxed; }
     bool isPushConstant() const { return layoutPushConstant; }
     bool isShaderRecord() const { return layoutShaderRecord; }
     bool isFullQuads() const { return layoutFullQuads; }
@@ -2328,6 +2332,8 @@ public:
                 appendStr(" constant_id=");
                 appendUint(qualifier.layoutSpecConstantId);
               }
+              if (qualifier.layoutRelaxed)
+                appendStr(" relaxed");
               if (qualifier.layoutPushConstant)
                 appendStr(" push_constant");
               if (qualifier.layoutBufferReference)

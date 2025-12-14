@@ -46,6 +46,7 @@
 // even if no merging was done (i.e., the stage was only one compilation unit).
 //
 
+#include "glslang/Include/Common.h"
 #include "glslang/Public/ShaderLang.h"
 #include "localintermediate.h"
 #include "../Include/InfoSink.h"
@@ -451,7 +452,7 @@ void TIntermediate::optimizeStageIO(TInfoSink&, TIntermediate& unit)
 
         // determine if the input/output pair should be demoted
         // do the faster (and more likely) loose-loose check first
-        if (std::none_of(unitLiveInputs.begin(), unitLiveInputs.end(), isMatchingInput) && 
+        if (std::none_of(unitLiveInputs.begin(), unitLiveInputs.end(), isMatchingInput) &&
             std::none_of(unitAllInputs.begin(), unitAllInputs.end(), isMatchingInputBlockMember)) {
             // demote any input matching the output
             auto demoteMatchingInputs = [output](TIntermNode* input) {
@@ -1480,6 +1481,10 @@ void TIntermediate::mergeErrorCheck(TInfoSink& infoSink, const TIntermSymbol& sy
         error(infoSink, "Layout packing qualifier must match:", unitStage);
         layoutQualifierError = true;
     }
+    if (symbol.getQualifier().layoutRelaxed != unitSymbol.getQualifier().layoutRelaxed) {
+        error(infoSink, "Relaxed layout qualifier must match:", unitStage);
+        layoutQualifierError = true;
+    }
     if (symbol.getQualifier().hasLocation() && unitSymbol.getQualifier().hasLocation() && symbol.getQualifier().layoutLocation != unitSymbol.getQualifier().layoutLocation) {
         error(infoSink, "Layout location qualifier must match:", unitStage);
         layoutQualifierError = true;
@@ -2449,7 +2454,7 @@ int TIntermediate::getBaseAlignmentScalar(const TType& type, int& size)
 // stride comes from the flattening down to vectors.
 //
 // Return value is the alignment of the type.
-int TIntermediate::getBaseAlignment(const TType& type, int& size, int& stride, TLayoutPacking layoutPacking, bool rowMajor)
+int TIntermediate::getBaseAlignment(const TType& type, int& size, int& stride, TLayoutPacking layoutPacking, bool rowMajor, bool layoutRelaxed)
 {
     int alignment;
 
@@ -2517,9 +2522,12 @@ int TIntermediate::getBaseAlignment(const TType& type, int& size, int& stride, T
     if (type.isArray()) {
         // TODO: perf: this might be flattened by using getCumulativeArraySize(), and a deref that discards all arrayness
         TType derefType(type, 0);
-        alignment = getBaseAlignment(derefType, size, dummyStride, layoutPacking, rowMajor);
+        alignment = getBaseAlignment(derefType, size, dummyStride, layoutPacking, rowMajor, false);
         if (std140)
             alignment = std::max(baseAlignmentVec4Std140, alignment);
+        if (layoutRelaxed)
+            // Correct size of the array element with enabled relaxed block layout
+            getBaseAlignment(derefType, size, dummyStride, layoutPacking, rowMajor, layoutRelaxed);
         RoundToPow2(size, alignment);
         stride = size;  // uses full matrix size for stride of an array of matrices (not quite what rule 6/8, but what's expected)
                         // uses the assumption for rule 10 in the comment above
@@ -2540,9 +2548,17 @@ int TIntermediate::getBaseAlignment(const TType& type, int& size, int& stride, T
             // modify just the children's view of matrix layout, if there is one for this member
             TLayoutMatrix subMatrixLayout = memberList[m].type->getQualifier().layoutMatrix;
             int memberAlignment = getBaseAlignment(*memberList[m].type, memberSize, dummyStride, layoutPacking,
-                                                   (subMatrixLayout != ElmNone) ? (subMatrixLayout == ElmRowMajor) : rowMajor);
+                                                   (subMatrixLayout != ElmNone) ? (subMatrixLayout == ElmRowMajor) : rowMajor,
+                                                   false);
             maxAlignment = std::max(maxAlignment, memberAlignment);
+            if (layoutRelaxed)
+                // Correct member alignment and size with enabled relaxed block layout
+                memberAlignment = getBaseAlignment(*memberList[m].type, memberSize, dummyStride, layoutPacking,
+                                                   (subMatrixLayout != ElmNone) ? (subMatrixLayout == ElmRowMajor) : rowMajor,
+                                                   layoutRelaxed);
             RoundToPow2(size, memberAlignment);
+            if (improperStraddle(*memberList[m].type, memberSize, size, memberList[m].type->isVector()))
+                RoundToPow2(size, 16);
             size += memberSize;
         }
 
@@ -2561,6 +2577,10 @@ int TIntermediate::getBaseAlignment(const TType& type, int& size, int& stride, T
     // rules 2 and 3
     if (type.isVector()) {
         int scalarAlign = getBaseAlignmentScalar(type, size);
+        if (layoutRelaxed) {
+            size *= type.getVectorSize();
+            return scalarAlign;
+        }
         switch (type.getVectorSize()) {
         case 1: // HLSL has this, GLSL does not
             return scalarAlign;
@@ -2594,7 +2614,7 @@ int TIntermediate::getBaseAlignment(const TType& type, int& size, int& stride, T
         // rule 5: deref to row, not to column, meaning the size of vector is num columns instead of num rows
         TType derefType(type, 0, rowMajor);
 
-        alignment = getBaseAlignment(derefType, size, dummyStride, layoutPacking, rowMajor);
+        alignment = getBaseAlignment(derefType, size, dummyStride, layoutPacking, rowMajor, false);
         if (std140)
             alignment = std::max(baseAlignmentVec4Std140, alignment);
         RoundToPow2(size, alignment);
@@ -2696,12 +2716,12 @@ int TIntermediate::getScalarAlignment(const TType& type, int& size, int& stride,
     return 1;
 }
 
-int TIntermediate::getMemberAlignment(const TType& type, int& size, int& stride, TLayoutPacking layoutPacking, bool rowMajor)
+int TIntermediate::getMemberAlignment(const TType& type, int& size, int& stride, TLayoutPacking layoutPacking, bool rowMajor, bool layoutRelaxed)
 {
     if (layoutPacking == glslang::ElpScalar) {
         return getScalarAlignment(type, size, stride, rowMajor);
     } else {
-        return getBaseAlignment(type, size, stride, layoutPacking, rowMajor);
+        return getBaseAlignment(type, size, stride, layoutPacking, rowMajor, layoutRelaxed);
     }
 }
 
@@ -2712,12 +2732,18 @@ void TIntermediate::updateOffset(const TType& parentType, const TType& memberTyp
 
     // modify just the children's view of matrix layout, if there is one for this member
     TLayoutMatrix subMatrixLayout = memberType.getQualifier().layoutMatrix;
+    TLayoutPacking layoutPacking = parentType.getQualifier().layoutPacking;
+    bool layoutRelaxed = parentType.getQualifier().layoutRelaxed;
     int memberAlignment = getMemberAlignment(memberType, memberSize, dummyStride,
-                                             parentType.getQualifier().layoutPacking,
+                                             layoutPacking,
                                              subMatrixLayout != ElmNone
                                                  ? subMatrixLayout == ElmRowMajor
-                                                 : parentType.getQualifier().layoutMatrix == ElmRowMajor);
+                                                 : parentType.getQualifier().layoutMatrix == ElmRowMajor,
+                                             layoutRelaxed);
     RoundToPow2(offset, memberAlignment);
+    if (layoutPacking != ElpScalar &&
+        improperStraddle(memberType, memberSize, offset, memberType.isVector()))
+        RoundToPow2(offset, 16);
 }
 
 // Lookup or calculate the offset of a block member, using the recursively
@@ -2756,7 +2782,8 @@ int TIntermediate::getBlockSize(const TType& blockType)
     int dummyStride;
     getMemberAlignment(*memberList[lastIndex].type, lastMemberSize, dummyStride,
                        blockType.getQualifier().layoutPacking,
-                       blockType.getQualifier().layoutMatrix == ElmRowMajor);
+                       blockType.getQualifier().layoutMatrix == ElmRowMajor,
+                       blockType.getQualifier().layoutRelaxed);
 
     return lastOffset + lastMemberSize;
 }

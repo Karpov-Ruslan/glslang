@@ -1759,7 +1759,7 @@ void HlslParseContext::handleEntryPointAttributes(const TSourceLoc& loc, const T
                 intermediate.setLocalSize(lid, sequence[lid]->getAsConstantUnion()->getConstArray()[0].getIConst());
             break;
         }
-        case EatInstance: 
+        case EatInstance:
         {
             int invocations;
 
@@ -3710,7 +3710,8 @@ void HlslParseContext::decomposeStructBufferMethods(const TSourceLoc& loc, TInte
                 int size;
                 int stride;
                 intermediate.getMemberAlignment(argArray->getType(), size, stride, argArray->getType().getQualifier().layoutPacking,
-                                                argArray->getType().getQualifier().layoutMatrix == ElmRowMajor);
+                                                argArray->getType().getQualifier().layoutMatrix == ElmRowMajor,
+                                                argArray->getType().getQualifier().layoutRelaxed);
 
                 TIntermTyped* assign = intermediate.addAssign(EOpAssign, argStride,
                                                               intermediate.addConstantUnion(stride, loc, true), loc);
@@ -7492,6 +7493,8 @@ void HlslParseContext::mergeObjectLayoutQualifiers(TQualifier& dst, const TQuali
         dst.layoutMatrix = src.layoutMatrix;
     if (src.hasPacking())
         dst.layoutPacking = src.layoutPacking;
+    if (src.isRelaxed())
+        dst.layoutRelaxed = true;
 
     if (src.hasStream())
         dst.layoutStream = src.layoutStream;
@@ -9046,7 +9049,8 @@ void HlslParseContext::fixBlockUniformOffsets(const TQualifier& qualifier, TType
                                                               qualifier.layoutPacking,
                                                               subMatrixLayout != ElmNone
                                                                   ? subMatrixLayout == ElmRowMajor
-                                                                  : qualifier.layoutMatrix == ElmRowMajor);
+                                                                  : qualifier.layoutMatrix == ElmRowMajor,
+                                                              typeList[member].type->getQualifier().layoutRelaxed);
         if (memberQualifier.hasOffset()) {
             // "The specified offset must be a multiple
             // of the base alignment of the type of the block member it qualifies, or a compile-time error results."
@@ -9070,6 +9074,9 @@ void HlslParseContext::fixBlockUniformOffsets(const TQualifier& qualifier, TType
         // increase it to the first offset that is a multiple of
         // the actual alignment."
         RoundToPow2(offset, memberAlignment);
+        if (typeList[member].type->getQualifier().layoutPacking != ElpScalar &&
+            intermediate.improperStraddle(*typeList[member].type, memberSize, offset, typeList[member].type->isVector()))
+            RoundToPow2(offset, 16);
         typeList[member].type->getQualifier().layoutOffset = offset;
         offset += memberSize;
     }
@@ -9332,12 +9339,16 @@ void HlslParseContext::updateStandaloneQualifierDefaults(const TSourceLoc& loc, 
             globalUniformDefaults.layoutMatrix = qualifier.layoutMatrix;
         if (qualifier.hasPacking())
             globalUniformDefaults.layoutPacking = qualifier.layoutPacking;
+        if (qualifier.isRelaxed())
+            globalUniformDefaults.layoutRelaxed = true;
         break;
     case EvqBuffer:
         if (qualifier.hasMatrix())
             globalBufferDefaults.layoutMatrix = qualifier.layoutMatrix;
         if (qualifier.hasPacking())
             globalBufferDefaults.layoutPacking = qualifier.layoutPacking;
+        if (qualifier.isRelaxed())
+            globalBufferDefaults.layoutRelaxed = true;
         break;
     case EvqVaryingIn:
         break;

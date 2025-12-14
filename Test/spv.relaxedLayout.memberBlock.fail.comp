@@ -1,0 +1,12 @@
+#version 460 core
+
+#extension GL_EXT_relaxed_block_layout : enable
+
+layout(binding = 0, std140) restrict writeonly buffer UBO {
+    int i;
+    layout(relaxed) vec3 j; // member of block cannot have a relaxed layout qualifier
+};
+
+void main() {
+    i = 5;
+}

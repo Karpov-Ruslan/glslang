@@ -602,6 +602,16 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.tensorARM.params.comp",
         "spv.tensorARM.read.comp",
         "spv.tensorARM.size.comp",
+        "spv.relaxedLayout.memberBlock.fail.comp",
+        "spv.relaxedLayout.individualVariable.fail.comp",
+        "spv.relaxedLayout.multipleStructUsage.comp",
+        "spv.relaxedLayout.nesting.comp",
+        "spv.relaxedLayout.std140.comp",
+        "spv.relaxedLayout.std430.comp",
+        "spv.relaxedLayout.scalar.comp",
+        "spv.relaxedLayout.std140.default.comp",
+        "spv.relaxedLayout.std430.default.comp",
+        "spv.relaxedLayout.scalar.default.comp",
     })),
     FileNameAsCustomTestSuffix
 );

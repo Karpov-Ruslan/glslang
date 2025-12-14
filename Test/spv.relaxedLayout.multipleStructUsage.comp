@@ -1,0 +1,21 @@
+#version 460 core
+
+#extension GL_EXT_relaxed_block_layout : enable
+
+struct S {
+    int i;
+    vec3 j;
+};
+
+layout(binding = 0, std430) buffer SSBO0 {
+    S s;
+} ssbo0;
+
+layout(binding = 1, std430, relaxed) buffer SSBO1 {
+    S s;
+} ssbo1;
+
+void main() {
+    ssbo0.s.i = 0;
+    ssbo1.s.i = 0;
+}

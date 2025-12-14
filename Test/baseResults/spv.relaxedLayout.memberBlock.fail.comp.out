@@ -1,0 +1,6 @@
+spv.relaxedLayout.memberBlock.fail.comp
+ERROR: 0:7: 'j' : member of block cannot have a relaxed layout qualifier 
+ERROR: 1 compilation errors.  No code generated.
+
+
+SPIR-V is not generated for failed compile or link
